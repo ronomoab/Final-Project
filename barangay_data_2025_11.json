@@ -1,0 +1,39 @@
+{
+    "transactions": [
+        {
+            "transaction_number": "110225-01",
+            "documents": [
+                {
+                    "type": "Barangay Clearance",
+                    "Name": "Roland Noel Abanes",
+                    "Home Address": "112 San Bartolome St., San Pascual, Obando, Bulacan",
+                    "Age": "18",
+                    "Purpose": "Academic",
+                    "Fee": 40
+                }
+            ],
+            "total_fee": 40,
+            "status": "Completed",
+            "date_created": "2025-11-02"
+        },
+        {
+            "transaction_number": "110225-02",
+            "documents": [
+                {
+                    "type": "Barangay Clearance",
+                    "First Name": "Roland Noel",
+                    "Last Name": "Abanes",
+                    "Home Address": "112 San Bartolome St., San Pascual, Obando, Bulacan",
+                    "Age": "18",
+                    "Purpose": "Education",
+                    "Monthly Income": 18000.0,
+                    "Fee": 40
+                }
+            ],
+            "total_fee": 40,
+            "status": "Pending",
+            "date_created": "2025-11-02"
+        }
+    ],
+    "archived": []
+}
