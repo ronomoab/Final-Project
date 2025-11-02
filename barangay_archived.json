@@ -1,5 +1,5 @@
 {
-    "transactions": [
+    "archived": [
         {
             "transaction_number": "110225-02",
             "documents": [
@@ -18,6 +18,5 @@
             "status": "Pending",
             "date_created": "2025-11-02"
         }
-    ],
-    "archived": []
+    ]
 }
