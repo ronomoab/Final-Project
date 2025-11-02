@@ -1,62 +1,62 @@
+# IMPORTS AND SETUP
 import json
 import os
 from datetime import datetime
-from colorama import Fore, Style, init
+from colorama import init, Fore, Style
 
 init(autoreset=True)
 
-# ==========================================================
-# FILE HANDLING & SETUP
-# ==========================================================
-ARCHIVE_FILE = "archived_transactions.json"
-
-def get_current_data_file():
-    now = datetime.now()
-    return f"barangay_data_{now.year}_{now.month:02d}.json"
-
-def load_data():
-    data_file = get_current_data_file()
-    archive_old_data_files()
-
-    if not os.path.exists(data_file):
-        with open(data_file, "w") as f:
+# DATA FILE SETUP
+def get_data_file():
+    """Create or select JSON file for the current month."""
+    today = datetime.today()
+    file_name = f"transactions_{today.strftime('%Y_%m')}.json"
+    if not os.path.exists(file_name):
+        with open(file_name, "w") as f:
             json.dump({"transactions": [], "archived": []}, f, indent=4)
-    with open(data_file, "r") as f:
+    return file_name
+
+DATA_FILE = get_data_file()
+
+# DATA HANDLING
+def load_data():
+    with open(DATA_FILE, "r") as f:
         return json.load(f)
 
 def save_data(data):
-    with open(get_current_data_file(), "w") as f:
+    with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-def archive_old_data_files():
-    current_file = get_current_data_file()
-    if not os.path.exists(ARCHIVE_FILE):
-        with open(ARCHIVE_FILE, "w") as f:
-            json.dump({"archived": []}, f, indent=4)
-
-    for file in os.listdir():
-        if file.startswith("barangay_data_") and file.endswith(".json") and file != current_file:
+def archive_old_transactions():
+    """Archive transactions from previous months."""
+    files = [f for f in os.listdir() if f.startswith("transactions_") and f.endswith(".json")]
+    for file in files:
+        if file != DATA_FILE:
             with open(file, "r") as f:
-                old_data = json.load(f)
-            with open(ARCHIVE_FILE, "r") as af:
-                archive = json.load(af)
-
-            archive["archived"].extend(old_data.get("transactions", []))
-            with open(ARCHIVE_FILE, "w") as af:
-                json.dump(archive, af, indent=4)
-
+                data = json.load(f)
+            archived_file = f"archived_{file}"
+            if os.path.exists(archived_file):
+                with open(archived_file, "r") as f:
+                    archived_data = json.load(f)
+                archived_data["archived"].extend(data["transactions"])
+            else:
+                archived_data = {"archived": data["transactions"]}
+            with open(archived_file, "w") as f:
+                json.dump(archived_data, f, indent=4)
             os.remove(file)
 
-# ==========================================================
-# UTILITIES
-# ==========================================================
-def generate_transaction_number():
-    today = datetime.now().strftime("%m%d%y")
-    data = load_data()
-    existing_today = [t for t in data["transactions"] if t["transaction_number"].startswith(today)]
-    next_num = len(existing_today) + 1
-    return f"{today}-{next_num:02d}"
+archive_old_transactions()
 
+# TRANSACTION NUMBER GENERATOR
+def generate_transaction_number():
+    today = datetime.today()
+    today_str = today.strftime("%m%d%y")
+    data = load_data()
+    today_txns = [t for t in data["transactions"] if t["transaction_number"].startswith(today_str)]
+    increment = len(today_txns) + 1
+    return f"{today_str}{increment:02d}"
+
+# FEE CALCULATION
 def calculate_fee(document_type):
     fees = {
         "Certificate of Indigency": 0,
@@ -66,26 +66,7 @@ def calculate_fee(document_type):
     }
     return fees.get(document_type, 0)
 
-def get_address():
-    print(Fore.CYAN + "\nEnter your address details:")
-    house_number = input(Fore.WHITE + "Enter House Number: ").strip()
-    print("\nChoose your street:")
-    streets = ["San Bartolome St.", "Sta. Cruz", "Nazareno", "San Juan", "Sto. Nino", "Delarosa"]
-
-    for i, st in enumerate(streets, 1):
-        print(f"{i}. {st}")
-    while True:
-        choice = input(Fore.WHITE + "Enter your choice (1-6): ").strip()
-        if choice.isdigit() and 1 <= int(choice) <= 6:
-            street = streets[int(choice) - 1]
-            break
-        else:
-            print(Fore.RED + "Invalid choice. Please select a valid street number.")
-    return f"{house_number} {street}, San Pascual, Obando, Bulacan"
-
-# ==========================================================
 # DASHBOARD
-# ==========================================================
 def show_dashboard():
     data = load_data()
     total = len(data["transactions"])
@@ -93,29 +74,42 @@ def show_dashboard():
     completed = sum(1 for t in data["transactions"] if t["status"] == "Completed")
 
     print(Fore.CYAN + "\n===================================================")
-    print("Barangay San Pascual Document Request Dashboard")
+    print("Good day! Welcome to Barangay San Pascual Document Request Dashboard.")
+    print("You may request barangay issued documents accordingly!")
     print("===================================================")
-    print(Fore.WHITE + f"Total Requests: {total}")
-    print(Fore.YELLOW + f"Pending Requests: {pending}")
-    print(Fore.GREEN + f"Completed Requests: {completed}")
-    print(Fore.CYAN + "===================================================\n")
+    print(f"Total Requests Submitted: {total}")
+    print(f"Pending Requests: {pending}")
+    print(f"Completed Requests: {completed}")
+    print("===================================================\n")
 
-# ==========================================================
-# CORE FUNCTIONS
-# ==========================================================
+# DOCUMENT REQUEST
+def select_address():
+    print("\nChoose Address:")
+    house = input("Enter House Number: ")
+    streets = ["San Bartolome St.", "Sta. Cruz", "Nazareno", "San Juan", "Sto. Nino", "Delarosa"]
+    for i, s in enumerate(streets, 1):
+        print(f"{i}. {s}")
+    while True:
+        choice = input("Select your street (1-6): ")
+        if choice.isdigit() and 1 <= int(choice) <= len(streets):
+            street = streets[int(choice) - 1]
+            break
+        print("Invalid selection.")
+    return f"{house} {street} San Pascual Obando Bulacan"
+
 def new_transaction():
     data = load_data()
     transaction_number = generate_transaction_number()
     documents = []
 
     while True:
-        print(Fore.CYAN + "\nSelect document to request:")
-        print("1. Certificate of Indigency (₱20,000 below) - FREE")
-        print("2. Cedula - ₱50")
-        print("3. Barangay Clearance - ₱40")
-        print("4. Certificate of Good Conduct - FREE")
+        print("\nPlease select the document you want to request:")
+        print("1. Certificate of Indigency (Earning ₱20,000 below)-FREE")
+        print("2. Cedula -₱50")
+        print("3. Barangay Clearance -₱40")
+        print("4. Certificate of Good Conduct -FREE")
 
-        choice = input(Fore.WHITE + "Enter your choice (1-4): ").strip()
+        choice = input("Enter your choice (1-4): ")
         doc_types = {
             "1": "Certificate of Indigency",
             "2": "Cedula",
@@ -124,204 +118,206 @@ def new_transaction():
         }
         document_type = doc_types.get(choice)
         if not document_type:
-            print(Fore.RED + "Invalid choice. Try again.")
+            print(Fore.RED + "Invalid selection.")
             continue
 
-        print(Fore.CYAN + f"\n--- Enter details for {document_type} ---")
-        first_name = input(Fore.WHITE + "First Name: ").strip()
-        last_name = input(Fore.WHITE + "Last Name: ").strip()
-        home_address = get_address()
-        age = input("Age: ").strip()
-        purpose = input("Purpose: ").strip()
-
+        print(f"\n--- Enter details for {document_type} ---")
+        firstname = input("First Name: ")
+        lastname = input("Last Name: ")
         doc = {
             "type": document_type,
-            "First Name": first_name,
-            "Last Name": last_name,
-            "Home Address": home_address,
-            "Age": age,
-            "Purpose": purpose
+            "First Name": firstname,
+            "Last Name": lastname,
+            "Address": select_address(),
+            "Age": input("Age: "),
+            "Purpose": input("Purpose: ")
         }
 
         if document_type in ["Certificate of Indigency", "Cedula"]:
             while True:
                 try:
-                    income = float(input(Fore.WHITE + "Monthly Income: "))
+                    income = float(input("Monthly Income: "))
                     if document_type == "Certificate of Indigency" and income > 20000:
-                        print(Fore.RED + "❌ You are not qualified for Certificate of Indigency.")
+                        print(Fore.RED + "\n⚠️ Income exceeds ₱20,000. Cannot request Indigency Certificate.\n")
                         return
                     doc["Monthly Income"] = income
                     break
                 except ValueError:
-                    print(Fore.RED + "Please enter a valid number.")
+                    print("Invalid input. Enter numeric value.")
 
         doc["Fee"] = calculate_fee(document_type)
         documents.append(doc)
 
-        if input(Fore.WHITE + "Request another document? (y/n): ").lower() != 'y':
+        another = input("\nRequest another document in same transaction? (y/n): ").lower()
+        if another != 'y':
             break
 
+    total_fee = sum(d["Fee"] for d in documents)
     transaction = {
         "transaction_number": transaction_number,
         "documents": documents,
-        "total_fee": sum(d["Fee"] for d in documents),
+        "total_fee": total_fee,
         "status": "Pending",
-        "date_created": datetime.now().strftime("%Y-%m-%d")
+        "date_created": datetime.today().date().isoformat()
     }
 
     data["transactions"].append(transaction)
     save_data(data)
 
-    print(Fore.GREEN + "\n========================================")
-    print(f"Transaction #: {transaction_number}")
-    print(f"Total Fee: ₱{transaction['total_fee']}")
-    print("Your request has been successfully recorded!")
-    print("========================================\n")
+    print(Fore.GREEN + f"\nYour Transaction Number is: {transaction_number}")
+    print(f"Total Fee: ₱{total_fee}")
+    print("Request successfully recorded!\n")
 
-# ==========================================================
-# VIEWING
-# ==========================================================
-def view_today_transactions():
+# VIEW TRANSACTIONS
+def view_transactions():
     data = load_data()
-    today = datetime.now().strftime("%Y-%m-%d")
-    today_txns = [t for t in data["transactions"] if t["date_created"] == today]
-
-    print(Fore.CYAN + "\n--- Today's Transactions ---")
-    if not today_txns:
-        print(Fore.YELLOW + "No transactions for today.")
-        return
-    for t in today_txns:
-        print(f"{t['transaction_number']} | {t['status']} | ₱{t['total_fee']}")
-    print(Fore.CYAN + "-----------------------------")
-
-def view_monthly_transactions():
-    data = load_data()
-    print(Fore.CYAN + "\n--- Transactions for This Month ---")
     if not data["transactions"]:
-        print(Fore.YELLOW + "No transactions this month.")
+        print(Fore.YELLOW + "\nNo transactions available.")
         return
-    for t in data["transactions"]:
-        print(f"{t['transaction_number']} | Date: {t['date_created']} | Status: {t['status']} | ₱{t['total_fee']}")
-    print(Fore.CYAN + "-----------------------------")
 
-# ==========================================================
-# SEARCH / UPDATE / COMPLETE
-# ==========================================================
-def search_update_transaction():
-    data = load_data()
+    print("\nView transactions for:")
+    print("1. Today")
+    print("2. This Month")
+    choice = input("Enter choice (1-2): ").strip()
 
-    print(Fore.CYAN + "\nSearch by:")
-    print("1. Transaction Number")
-    print("2. Date Created")
-    print("3. Status")
-    choice = input(Fore.WHITE + "Enter choice (1-3): ").strip()
-
-    found = None
+    today = datetime.today().date()
     if choice == "1":
-        txn_num = input("Enter Transaction Number: ").strip()
-        found = next((t for t in data["transactions"] if t["transaction_number"] == txn_num), None)
+        filtered = [t for t in data["transactions"] if t["date_created"] == today.isoformat()]
+        header = f"--- Transactions for Today ({today.isoformat()}) ---"
     elif choice == "2":
-        date = input("Enter Date (YYYY-MM-DD): ").strip()
-        results = [t for t in data["transactions"] if t["date_created"] == date]
-        found = results[0] if results else None
-    elif choice == "3":
-        status = input("Enter Status (Pending/Completed): ").strip().capitalize()
-        results = [t for t in data["transactions"] if t["status"] == status]
-        found = results[0] if results else None
+        current_month = today.month
+        current_year = today.year
+        filtered = [t for t in data["transactions"]
+                    if datetime.fromisoformat(t["date_created"]).month == current_month
+                    and datetime.fromisoformat(t["date_created"]).year == current_year]
+        header = f"--- Transactions for {today.strftime('%B %Y')} ---"
     else:
         print(Fore.RED + "Invalid choice.")
         return
 
-    if not found:
-        print(Fore.RED + "Transaction not found.")
+    if not filtered:
+        print(Fore.YELLOW + "No transactions found for the selected period.")
         return
 
-    print(Fore.CYAN + f"\nTransaction #: {found['transaction_number']} | Status: {found['status']} | ₱{found['total_fee']}")
-    for i, doc in enumerate(found["documents"], 1):
-        print(f"\nDocument {i}: {doc['type']}")
-        print(f"  Name: {doc.get('First Name', '')} {doc.get('Last Name', '')}")
-        for k, v in doc.items():
-            if k not in ["type", "First Name", "Last Name"]:
-                print(f"  {k}: {v}")
+    print(Fore.CYAN + f"\n{header}")
+    for t in filtered:
+        status_color = Fore.GREEN if t['status'] == "Completed" else Fore.YELLOW
+        print(f"Transaction #: {t['transaction_number']} | Status: {status_color}{t['status']}{Fore.CYAN} | Total Fee: ₱{t['total_fee']}")
+        for i, doc in enumerate(t["documents"], 1):
+            print(f"  Document {i}: {doc['type']}")
+            for k, v in doc.items():
+                if k != "type":
+                    print(f"    {k}: {v}")
+    print("-----------------------------")
 
-    print(Fore.CYAN + "\n1. Update Transaction\n2. Mark as Completed\n3. Cancel")
-    action = input(Fore.WHITE + "Choose action (1-3): ").strip()
+# SEARCH, UPDATE, MARK COMPLETE (COMBINED)
+def manage_transaction():
+    data = load_data()
+    print("\nSearch Transaction by:")
+    print("1. Transaction Number")
+    print("2. Status")
+    print("3. Date Created")
+    choice = input("Enter choice (1-3): ").strip()
+
+    if choice == "1":
+        txn_num = input("Enter Transaction Number: ").strip()
+        filtered = [t for t in data["transactions"] if t["transaction_number"] == txn_num]
+    elif choice == "2":
+        print("Statuses: Pending, Completed")
+        status = input("Enter Status: ").capitalize()
+        filtered = [t for t in data["transactions"] if t["status"] == status]
+    elif choice == "3":
+        date_str = input("Enter Date (YYYY-MM-DD): ").strip()
+        filtered = [t for t in data["transactions"] if t["date_created"] == date_str]
+    else:
+        print(Fore.RED + "Invalid choice.")
+        return
+
+    if not filtered:
+        print(Fore.YELLOW + "No matching transactions found.")
+        return
+
+    # Display results
+    for t in filtered:
+        print(Fore.CYAN + f"\nTransaction #: {t['transaction_number']} | Status: {t['status']} | Total Fee: ₱{t['total_fee']}")
+        for i, doc in enumerate(t["documents"], 1):
+            print(f"  Document {i}: {doc['type']}")
+            for k, v in doc.items():
+                if k != "type":
+                    print(f"    {k}: {v}")
+
+    # Determine transaction to manage
+    if len(filtered) == 1:
+        transaction = filtered[0]  # skip asking txn number
+    else:
+        txn_num = input("\nEnter Transaction Number to manage: ").strip()
+        transaction = next((t for t in data["transactions"] if t["transaction_number"] == txn_num), None)
+        if not transaction:
+            print(Fore.RED + "Transaction not found.")
+            return
+
+    # Update or mark complete
+    print("\n1. Update Transaction")
+    print("2. Mark as Complete")
+    action = input("Choose action (1-2): ").strip()
 
     if action == "1":
-        for doc in found["documents"]:
-            print(Fore.CYAN + "\n--- Update Document Details ---")
-
-            # ✅ Allow changing document type
-            print(Fore.WHITE + "Change Document Type?")
-            print("1. Certificate of Indigency")
-            print("2. Cedula")
-            print("3. Barangay Clearance")
-            print("4. Certificate of Good Conduct")
-            change_doc = input("Enter new type (1-4) or press Enter to keep current: ").strip()
-            doc_types = {
-                "1": "Certificate of Indigency",
-                "2": "Cedula",
-                "3": "Barangay Clearance",
-                "4": "Certificate of Good Conduct"
-            }
-            if change_doc in doc_types:
-                doc["type"] = doc_types[change_doc]
-                doc["Fee"] = calculate_fee(doc["type"])
-
-            # Update name, purpose, address
-            for field in ["First Name", "Last Name", "Purpose"]:
-                new_val = input(f"Enter new {field} (leave blank to keep '{doc[field]}'): ").strip()
-                if new_val:
+        print("\nWhich document to update?")
+        for i, doc in enumerate(transaction["documents"], 1):
+            print(f"{i}. {doc['type']}")
+        doc_choice = input("Enter document number: ")
+        if not doc_choice.isdigit() or int(doc_choice) not in range(1, len(transaction["documents"]) + 1):
+            print(Fore.RED + "Invalid selection.")
+            return
+        doc = transaction["documents"][int(doc_choice) - 1]
+        # Allow changing document type
+        print("\nSelect new document type:")
+        doc_types = ["Certificate of Indigency", "Cedula", "Barangay Clearance", "Certificate of Good Conduct"]
+        for i, d in enumerate(doc_types, 1):
+            print(f"{i}. {d}")
+        new_type_choice = input("Enter choice: ")
+        if new_type_choice.isdigit() and 1 <= int(new_type_choice) <= 4:
+            doc["type"] = doc_types[int(new_type_choice) - 1]
+            doc["Fee"] = calculate_fee(doc["type"])
+        for field in doc.keys():
+            if field not in ["type", "Fee"]:
+                new_val = input(f"Enter new {field} (leave blank to keep '{doc[field]}'): ")
+                if new_val.strip():
                     doc[field] = new_val
-
-            update_address = input("Change address? (y/n): ").lower()
-            if update_address == 'y':
-                doc["Home Address"] = get_address()
-
-        found["total_fee"] = sum(d["Fee"] for d in found["documents"])
+        transaction["total_fee"] = sum(d["Fee"] for d in transaction["documents"])
         save_data(data)
-        print(Fore.GREEN + "Transaction updated successfully!")
-
+        print(Fore.GREEN + "Transaction updated successfully.")
     elif action == "2":
-        found["status"] = "Completed"
+        transaction["status"] = "Completed"
         save_data(data)
-        print(Fore.GREEN + "Transaction marked as completed.")
+        print(Fore.GREEN + "Transaction marked as completed successfully.")
     else:
-        print(Fore.YELLOW + "Cancelled.")
+        print(Fore.RED + "Invalid action.")
 
-# ==========================================================
 # MAIN MENU
-# ==========================================================
 def main():
     while True:
         show_dashboard()
-        print(Fore.CYAN + "Menu Options:")
+        print("Menu Options:")
         print("1. New Transaction")
-        print("2. View Today's Transactions")
-        print("3. View Monthly Transactions")
-        print("4. Search / Update / Complete Transaction")
-        print("5. Exit")
-
-        choice = input(Fore.WHITE + "Enter your choice: ").strip()
+        print("2. View Transactions")
+        print("3. Search / Update / Complete Transaction")
+        print("4. Exit")
+        choice = input("Enter choice: ").strip()
 
         if choice == "1":
             new_transaction()
         elif choice == "2":
-            view_today_transactions()
+            view_transactions()
         elif choice == "3":
-            view_monthly_transactions()
+            manage_transaction()
         elif choice == "4":
-            search_update_transaction()
-        elif choice == "5":
-            print(Fore.GREEN + "\nThank you for using the Barangay San Pascual Document Request System.")
+            print(Fore.CYAN + "\nThank you for using the Barangay San Pascual Document Request System.")
             break
         else:
-            print(Fore.RED + "Invalid choice. Try again.")
+            print(Fore.RED + "Invalid choice.")
 
-        input(Fore.WHITE + "\nPress ENTER to return to the dashboard...")
+        input(Fore.CYAN + "\nPress Enter to return to the dashboard...")
 
-# ==========================================================
-# ENTRY POINT
-# ==========================================================
 if __name__ == "__main__":
     main()
