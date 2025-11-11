@@ -72,24 +72,6 @@ BarangaySanPascual/
 ├── barangay_data_2025_11.json # Monthly data file (auto-generated)
 └── README.md # Documentation
 
-----------------------------------
-
-Each monthly JSON file (e.g., `barangay_data_2025_11.json`) stores:
-```json
-{
-    "transactions": [
-        {
-            "transaction_number": "110225-01",
-            "documents": [...],
-            "total_fee": 90,
-            "status": "Pending",
-            "date_created": "2025-11-02"
-        }
-    ],
-    "archived": []
-}
-
------------------------------------
 🧠 How It Works
 Dashboard
 - Displays statistics:
@@ -158,3 +140,21 @@ Comments and Suggestions
 📜 License
 This project is open-source and free to use for educational or community management purposes.
 Developed for Barangay San Pascual, Obando, Bulacan.
+----------------------------------
+
+Each monthly JSON file (e.g., `barangay_data_2025_11.json`) stores:
+```json
+{
+    "transactions": [
+        {
+            "transaction_number": "110225-01",
+            "documents": [...],
+            "total_fee": 90,
+            "status": "Pending",
+            "date_created": "2025-11-02"
+        }
+    ],
+    "archived": []
+}
+
+-----------------------------------
