@@ -8,7 +8,7 @@ A **Python-based console application** that allows residents to conveniently req
 
 ### 🧾 Transaction Management
 - Create new transactions with **auto-generated unique transaction numbers**  
-  Format: `MMDDYY-XX` (e.g., `110225-01`)
+  Format: `MMDDYYXX` (e.g., `11022501`)
 - Supports multiple document requests under one transaction.
 - Automatically calculates fees based on document type.
 
