@@ -135,7 +135,8 @@ Comments and Suggestions
 - The system allows easy access to transactions and updates its details and status.
 - Compilation of transactions each day is really helpful for bookkeeping.
 - Hoping that this could run in a more user-friendly interface.
-- Would consider using in the future once developed. 
+- Would consider using in the future once fully developed.
+- Would prefer if the users can use the system in their own houses.
 
 📜 License
 This project is open-source and free to use for educational or community management purposes.
